@@ -1,4 +1,4 @@
-# Postgres 9.4
+# PostgreSQL 9.4
 
 This is a Vagrant build for [PostgreSQL 9.4](http://www.postgresql.org/) with the optional [Postgis](http://postgis.net/) extension also installed.
 
