@@ -1,6 +1,10 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+# Vagrant init uses double quotes so makes sense to ignore it in rubocop
+# rubocop:disable StringLiterals
+# rubocop:disable Metrics/LineLength
+
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what
@@ -12,7 +16,7 @@ Vagrant.configure(2) do |config|
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://atlas.hashicorp.com/search.
-  config.vm.box = "base"
+  config.vm.box = "ubuntu/trusty64"
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -22,11 +26,11 @@ Vagrant.configure(2) do |config|
   # Create a forwarded port mapping which allows access to a specific port
   # within the machine from a port on the host machine. In the example below,
   # accessing "localhost:8080" will access port 80 on the guest machine.
-  # config.vm.network "forwarded_port", guest: 80, host: 8080
+  config.vm.network "forwarded_port", guest: 5432, host: 1234
 
   # Create a private network, which allows host-only access to the machine
   # using a specific IP.
-  # config.vm.network "private_network", ip: "192.168.33.10"
+  config.vm.network "private_network", ip: "10.0.0.10"
 
   # Create a public network, which generally matched to bridged network.
   # Bridged networks make the machine appear as another physical device on
@@ -64,8 +68,51 @@ Vagrant.configure(2) do |config|
   # Enable provisioning with a shell script. Additional provisioners such as
   # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
   # documentation for more information about their specific syntax and use.
-  # config.vm.provision "shell", inline: <<-SHELL
-  #   sudo apt-get update
-  #   sudo apt-get install -y apache2
-  # SHELL
+  config.vm.provision "shell", name: "locale", inline: <<-SHELL
+    sudo locale-gen en_GB.UTF-8
+    sudo update-locale LANG=en_GB.UTF-8 LANGUAGE
+  SHELL
+
+  config.vm.provision "shell", name: "postgresql", inline: <<-SHELL
+    # Create apt repo file for postgres
+    sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+
+    # Import the repository signing key, and update the package lists
+    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+
+    # Update package lists
+    sudo apt-get update
+    # Upgrade packages
+    sudo apt-get -y upgrade
+
+    # Libraries and headers for C language frontend development
+    sudo apt-get -y install libpq-dev
+
+    # Install postgres
+    sudo apt-get -y install postgresql-9.4
+
+    # Additional supplied modules
+    sudo apt-get -y install postgresql-contrib-9.4
+
+    # The following are installed as part of our ansible scripts so have included them here for completeness
+    #sudo apt-get -y install python-pip
+    #sudo apt-get -y install python-dev
+
+    # Configure PostgreSQL - postgresql.conf
+    sudo /bin/cp /vagrant/postgresql.conf /etc/postgresql/9.4/main/postgresql.conf
+    sudo service postgresql restart
+
+    # Configure PostgreSQL - pg_hba.conf
+    sudo /bin/cp /vagrant/pg_hba.conf /etc/postgresql/9.4/main/pg_hba.conf
+    sudo service postgresql restart
+
+    # Create postgresql user
+    sudo -u postgres bash -c "psql -c \"CREATE USER vagrant WITH PASSWORD 'vagrant' SUPERUSER CREATEDB CREATEROLE;\""
+
+    # Make sure the postgis extensions are installed
+    sudo apt-get -y install libgeos-c1
+    sudo apt-get -y install 'postgresql-9.4-postgis-2.1'
+
+    sudo apt-get -y autoremove
+  SHELL
 end
