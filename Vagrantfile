@@ -94,10 +94,6 @@ Vagrant.configure(2) do |config|
     # Additional supplied modules
     sudo apt-get -y install postgresql-contrib-9.4
 
-    # The following are installed as part of our ansible scripts so have included them here for completeness
-    #sudo apt-get -y install python-pip
-    #sudo apt-get -y install python-dev
-
     # Configure PostgreSQL - postgresql.conf
     sudo /bin/cp /vagrant/postgresql.conf /etc/postgresql/9.4/main/postgresql.conf
     sudo service postgresql restart
@@ -107,7 +103,7 @@ Vagrant.configure(2) do |config|
     sudo service postgresql restart
 
     # Create postgresql user
-    sudo -u postgres bash -c "psql -c \"CREATE USER vagrant WITH PASSWORD 'vagrant' SUPERUSER CREATEDB CREATEROLE;\""
+    sudo -u postgres bash -c "psql -f /vagrant/create_user.sql"
 
     # Make sure the postgis extensions are installed
     sudo apt-get -y install libgeos-c1
